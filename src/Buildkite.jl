@@ -96,11 +96,12 @@ function Internals.request(
 end
 
 """
-    Buildkite.paged_request(method, endpoint; kwargs...) -> Channel{JSONObject}
-    Buildkite.paged_request(T, method, endpoint; kwargs...) -> Channel{T}
+    Buildkite.paged_request(method, endpoint; kwargs...) -> PagedRequest{JSONObject}
+    Buildkite.paged_request(T, method, endpoint; kwargs...) -> PagedRequest{T}
 
-General method for HTTP requests to `endpoint`. Return a `Channel` which iterates the paged
-items.
+General method for HTTP requests to a paginated `endpoint`. Returns a lazy iterator that
+fetches each page from the API on demand as iteration proceeds. Use `collect` to
+materialize all pages into a `Vector{T}`.
 """
 function paged_request(method::String, endpoint::String = ""; kwargs...)
     return Internals.paged_request(JSONObject, method, endpoint; kwargs...)
@@ -113,10 +114,68 @@ function Internals.link_rel_next(r)
     for link in eachsplit(HTTP.header(r, "Link"), ","; keepempty = false)
         if occursin("rel=\"next\"", link)
             next_uri = (match(r"<(.+)>", link)::RegexMatch).captures[1]::AbstractString
-            return next_uri
+            return String(next_uri)
         end
     end
     return nothing
+end
+
+# Lazy paginating iterator: fetches page N on first `iterate` call, page N+1 only when
+# the caller has drained page N.
+struct PagedRequest{T}
+    method::String
+    initial_uri::URI
+    headers::Dict{String, String}
+    query::Union{Dict{String, Any}, Nothing}
+    request_kwargs::Base.Pairs
+    page_limit::Int
+end
+
+Base.eltype(::Type{PagedRequest{T}}) where {T} = T
+Base.IteratorSize(::Type{<:PagedRequest}) = Base.SizeUnknown()
+
+mutable struct PagedState{T}
+    items::Vector{T}
+    idx::Int
+    next_uri::Union{String, Nothing}
+    page_count::Int
+end
+
+function _fetch_page!(items::Vector{T}, method, uri, headers, query, kwargs) where {T}
+    r = HTTP.request(method, uri, headers; query = query, kwargs...)
+    raw = JSON.parse(r.body)::AbstractVector
+    resize!(items, length(raw))
+    for i in eachindex(raw, items)
+        items[i] = Internals.unmarshal(T, raw[i])::T
+    end
+    return Internals.link_rel_next(r)
+end
+
+function Base.iterate(pr::PagedRequest{T}) where {T}
+    state = PagedState{T}(T[], 1, nothing, 0)
+    state.next_uri = _fetch_page!(
+        state.items, pr.method, pr.initial_uri, pr.headers, pr.query, pr.request_kwargs,
+    )
+    state.page_count = 1
+    return iterate(pr, state)
+end
+
+function Base.iterate(pr::PagedRequest{T}, state::PagedState{T}) where {T}
+    if state.idx <= length(state.items)
+        v = state.items[state.idx]
+        state.idx += 1
+        return (v, state)
+    end
+    if state.page_count >= pr.page_limit || state.next_uri === nothing
+        return nothing
+    end
+    # Follow-up requests use the Link header URI; query is already baked in there.
+    state.next_uri = _fetch_page!(
+        state.items, pr.method, URI(state.next_uri), pr.headers, nothing, pr.request_kwargs,
+    )
+    state.idx = 1
+    state.page_count += 1
+    return iterate(pr, state)
 end
 
 function Internals.paged_request(
@@ -128,29 +187,7 @@ function Internals.paged_request(
     headers = Internals.buildkite_headers(headers; token = token)
     uri = URIs.URI(BUILDKITE_API_URL; path = endpoint)
     query = Internals.process_query_params(query)
-    # Issue the initial request to the API uri and put the items in a channel.
-    r = HTTP.request(method, uri, headers; query = query, kwargs...)
-    items = JSON.parse(r.body)::AbstractVector
-    ch = Channel{IT}(length(items))
-    for item in items
-        put!(ch, Internals.unmarshal(IT, item)::IT)
-    end
-    # Create a task which will fill up the channel with more pages lazily
-    tsk = @async begin
-        page_count = 1
-        while page_count < page_limit && (next_uri = Internals.link_rel_next(r); next_uri !== nothing)
-            # The follow up requests use the Link header for the next uri but we pass the
-            # same method, headers and kwargs.
-            r = HTTP.request(method, next_uri, headers; kwargs...)
-            items = JSON.parse(r.body)
-            for item in items
-                put!(ch, Internals.unmarshal(IT, item)::IT)
-            end
-            page_count += 1
-        end
-    end
-    bind(ch, tsk)
-    return ch
+    return PagedRequest{IT}(method, uri, headers, query, kwargs, page_limit)
 end
 
 # Buildkite objects
