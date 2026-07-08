@@ -1,0 +1,21 @@
+name = "Buildkite"
+uuid = "2194bc0e-823a-4f8d-9f5c-e9fa0a400f92"
+version = "1.0.0"
+
+[deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
+
+[compat]
+HTTP = "2"
+JSON = "1"
+URIs = "1.1"
+julia = "1.10"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
