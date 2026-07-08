@@ -74,7 +74,7 @@ General method for HTTP requests to `endpoint`.
    `ENV["BUILDKITE_TOKEN"]`).
 
 Remaining keyword arguments are passed to
-[`HTTP.request`](https://juliaweb.github.io/HTTP.jl/stable/public_interface/#Requests-1).
+[`HTTP.request`](https://juliaweb.github.io/HTTP.jl/stable/api/client/#HTTP.request).
 """
 function request(method::String, endpoint::String = ""; kwargs...)
     return request(JSONObject, method, endpoint; kwargs...)
