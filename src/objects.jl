@@ -240,6 +240,7 @@ struct Agent <: BuildkiteObject
     version::Union{VersionNumber, Nothing}
     web_url::Union{URI, Nothing}
 end
+Internals.path(x::Agent) = "/agents/$(x.id::UUID)"
 
 struct Job <: BuildkiteObject
     agent::Union{Agent, Nothing}

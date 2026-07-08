@@ -64,6 +64,25 @@ function cluster_queues(organization::Organization, cluster::Cluster; kwargs...)
     )
 end
 
+# https://buildkite.com/docs/apis/rest-api/agents#list-agents
+function agents(organization::Organization; kwargs...)
+    return paged_request(
+        Agent, "GET", "/v2$(Internals.path(organization))/agents";
+        kwargs...
+    )
+end
+
+# https://buildkite.com/docs/apis/rest-api/agents#get-an-agent
+function agent(organization::Organization, agent::Agent; kwargs...)
+    return request(
+        Agent, "GET",
+        "/v2$(Internals.path(organization))$(Internals.path(agent))";
+        kwargs...
+    )
+end
+agent(organization::Organization, id::UUID; kwargs...) =
+    agent(organization, Agent(id = id); kwargs...)
+
 # https://buildkite.com/docs/apis/rest-api/clusters/queues#get-a-queue
 function cluster_queue(
         organization::Organization, cluster::Cluster, queue::ClusterQueue; kwargs...
