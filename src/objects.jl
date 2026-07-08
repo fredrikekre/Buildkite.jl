@@ -72,6 +72,9 @@ Internals.unmarshal(::Type{JSONObject}, val::AbstractDict) = JSONObject(val)
 # These types can be constructed directly from their string representation
 Internals.unmarshal(::Type{T}, val::AbstractString) where {T <: Union{UUID, URI, VersionNumber}} = T(val)
 
+# ...and passthrough when already parsed (e.g. when a user constructs a struct via kwargs).
+Internals.unmarshal(::Type{T}, val::T) where {T <: Union{UUID, URI, VersionNumber, DateTime}} = val
+
 # All times are in UTC with varying date format...
 function Internals.unmarshal(::Type{DateTime}, val)
     return @something(
@@ -118,6 +121,45 @@ struct User <: BuildkiteObject
     name::Union{String, Nothing}
     username::Union{String, Nothing}
 end
+
+struct Cluster <: BuildkiteObject
+    color::Union{String, Nothing}
+    created_at::Union{DateTime, Nothing}
+    created_by::Union{User, Nothing}
+    default_queue_id::Union{UUID, Nothing}
+    default_queue_url::Union{URI, Nothing}
+    description::Union{String, Nothing}
+    emoji::Union{String, Nothing}
+    graphql_id::Union{String, Nothing}
+    id::Union{UUID, Nothing}
+    maintainers::Union{JSONObject, Nothing}
+    maintainers_url::Union{URI, Nothing}
+    name::Union{String, Nothing}
+    queues_url::Union{URI, Nothing}
+    url::Union{URI, Nothing}
+    web_url::Union{URI, Nothing}
+end
+Internals.path(x::Cluster) = "/clusters/$(x.id::UUID)"
+
+struct ClusterQueue <: BuildkiteObject
+    cluster_url::Union{URI, Nothing}
+    created_at::Union{DateTime, Nothing}
+    created_by::Union{User, Nothing}
+    description::Union{String, Nothing}
+    dispatch_paused::Union{Bool, Nothing}
+    dispatch_paused_at::Union{DateTime, Nothing}
+    dispatch_paused_by::Union{User, Nothing}
+    dispatch_paused_note::Union{String, Nothing}
+    graphql_id::Union{String, Nothing}
+    hosted::Union{Bool, Nothing}
+    hosted_agents::Union{JSONObject, Nothing}
+    id::Union{UUID, Nothing}
+    key::Union{String, Nothing}
+    retry_agent_affinity::Union{String, Nothing}
+    url::Union{URI, Nothing}
+    web_url::Union{URI, Nothing}
+end
+Internals.path(x::ClusterQueue) = "/queues/$(x.id::UUID)"
 
 struct Pipeline <: BuildkiteObject
     allow_rebuilds::Union{Bool, Nothing}

@@ -27,6 +27,66 @@ function access_token(; kwargs...)
     return request(AccessToken, "GET", "/v2/access-token"; kwargs...)
 end
 
+# https://buildkite.com/docs/apis/rest-api/clusters#clusters-list-clusters
+function clusters(organization::Organization; kwargs...)
+    return paged_request(
+        Cluster, "GET", "/v2$(Internals.path(organization))/clusters";
+        kwargs...
+    )
+end
+
+# https://buildkite.com/docs/apis/rest-api/clusters#clusters-get-a-cluster
+function cluster(organization::Organization, cluster::Cluster; kwargs...)
+    return request(
+        Cluster, "GET",
+        "/v2$(Internals.path(organization))$(Internals.path(cluster))";
+        kwargs...
+    )
+end
+cluster(organization::Organization, id::UUID; kwargs...) =
+    cluster(organization, Cluster(id = id); kwargs...)
+
+# Resolve a cluster by `name` by paginating through `clusters(organization)`. Note that
+# this triggers a full list request; prefer looking up by `id` when known.
+function cluster(organization::Organization, name::AbstractString; kwargs...)
+    for c in clusters(organization; kwargs...)
+        c.name == name && return c
+    end
+    return nothing
+end
+
+# https://buildkite.com/docs/apis/rest-api/clusters/queues#list-queues
+function cluster_queues(organization::Organization, cluster::Cluster; kwargs...)
+    return paged_request(
+        ClusterQueue, "GET",
+        "/v2$(Internals.path(organization))$(Internals.path(cluster))/queues";
+        kwargs...
+    )
+end
+
+# https://buildkite.com/docs/apis/rest-api/clusters/queues#get-a-queue
+function cluster_queue(
+        organization::Organization, cluster::Cluster, queue::ClusterQueue; kwargs...
+    )
+    return request(
+        ClusterQueue, "GET",
+        "/v2$(Internals.path(organization))$(Internals.path(cluster))$(Internals.path(queue))";
+        kwargs...
+    )
+end
+cluster_queue(organization::Organization, cluster::Cluster, id::UUID; kwargs...) =
+    cluster_queue(organization, cluster, ClusterQueue(id = id); kwargs...)
+
+# Resolve a queue by `key` by paginating through `cluster_queues(organization, cluster)`.
+function cluster_queue(
+        organization::Organization, cluster::Cluster, key::AbstractString; kwargs...
+    )
+    for q in cluster_queues(organization, cluster; kwargs...)
+        q.key == key && return q
+    end
+    return nothing
+end
+
 # https://buildkite.com/docs/apis/rest-api/limits
 struct RateLimit
     remaining::Int
