@@ -18,11 +18,7 @@ const BUILDKITE_DATE_FORMAT_MS = Dates.dateformat"yyyy-mm-dd\THH:MM:SS.sss\Z"
 
 # Set Authorization and User-Agent
 function Internals.buildkite_headers(headers = nothing; token = nothing)
-    if headers === nothing
-        headers = Dict{String, String}()
-    else
-        headers = Dict{String, String}(h for h in headers)
-    end
+    headers = headers === nothing ? HTTP.Headers() : HTTP.Headers(headers)
     if !haskey(headers, "Authorization")
         if token === nothing
             token = get(ENV, "BUILDKITE_TOKEN", nothing)
@@ -33,7 +29,7 @@ function Internals.buildkite_headers(headers = nothing; token = nothing)
         headers["Authorization"] = "Bearer $(token)"
     end
     if !haskey(headers, "User-Agent")
-        headers["User-Agent"] = "Buildkite.jl" # Always overwrite this?
+        headers["User-Agent"] = "Buildkite.jl"
     end
     return headers
 end
@@ -125,7 +121,7 @@ end
 struct PagedRequest{T}
     method::String
     initial_uri::URI
-    headers::Dict{String, String}
+    headers::HTTP.Headers
     query::Union{Dict{String, Any}, Nothing}
     request_kwargs::Base.Pairs
     page_limit::Int

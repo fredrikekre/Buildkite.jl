@@ -208,13 +208,13 @@ function job_log(job::Job; kwargs...)
     # passed through verbatim. Consumers likely want helpers (strip ANSI, split into
     # `(timestamp, text)` lines, etc.); none provided yet.
     log_url = job.log_url::URI
-    headers = Dict("Accept" => "application/json")
+    headers = HTTP.Headers(["Accept" => "application/json"])
     return request(Log, "GET", String(log_url.path); headers = headers, kwargs...)
 end
 function job_log(
         organization::Organization, pipeline::Pipeline, build::Build, job::Job; kwargs...
     )
-    headers = Dict("Accept" => "application/json")
+    headers = HTTP.Headers(["Accept" => "application/json"])
     return request(
         Log, "GET",
         "/v2$(Internals.path(organization))$(Internals.path(pipeline))$(Internals.path(build))$(Internals.path(job))/log";
