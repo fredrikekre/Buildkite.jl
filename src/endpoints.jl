@@ -49,6 +49,8 @@ function pipeline(organization::Organization, pipeline::Pipeline; kwargs...)
 end
 pipeline(organization::Organization, slug::AbstractString; kwargs...) =
     pipeline(organization, Pipeline(slug = slug); kwargs...)
+pipeline(pipeline::Pipeline; kwargs...) =
+    request(Pipeline, "GET", String((pipeline.url::URI).path); kwargs...)
 
 # https://buildkite.com/docs/apis/rest-api/access-token#get-the-current-token
 function access_token(; kwargs...)
@@ -93,6 +95,8 @@ function artifacts(
         kwargs...
     )
 end
+artifacts(job::Job; kwargs...) =
+    paged_request(Artifact, "GET", String((job.artifacts_url::URI).path); kwargs...)
 
 # https://buildkite.com/docs/apis/rest-api/artifacts#get-an-artifact
 function artifact(
@@ -105,6 +109,8 @@ function artifact(
         kwargs...
     )
 end
+artifact(artifact::Artifact; kwargs...) =
+    request(Artifact, "GET", String((artifact.url::URI).path); kwargs...)
 
 # https://buildkite.com/docs/apis/rest-api/annotations#list-annotations-for-a-build
 function annotations(
@@ -114,6 +120,29 @@ function annotations(
         Annotation, "GET",
         "/v2$(Internals.path(organization))$(Internals.path(pipeline))$(Internals.path(build))/annotations";
         kwargs...
+    )
+end
+
+# https://buildkite.com/docs/apis/rest-api/jobs#get-a-jobs-log-output
+# The default response body is HTML; requesting `application/json` returns the structured
+# log object (content + header_times + size + url) that we map to a `Log`.
+# TODO: `Log.content` is the raw Buildkite log — per-line `\e_bk;t=<ms>\a` timestamp
+# prefixes, ANSI color escapes, `\r\n` line endings, and arbitrary Unicode (emoji)
+# passed through verbatim. Consumers likely want helpers (strip ANSI, split into
+# `(timestamp, text)` lines, etc.); none provided yet.
+function job_log(job::Job; kwargs...)
+    log_url = job.log_url::URI
+    headers = Dict("Accept" => "application/json")
+    return request(Log, "GET", String(log_url.path); headers = headers, kwargs...)
+end
+function job_log(
+        organization::Organization, pipeline::Pipeline, build::Build, job::Job; kwargs...
+    )
+    headers = Dict("Accept" => "application/json")
+    return request(
+        Log, "GET",
+        "/v2$(Internals.path(organization))$(Internals.path(pipeline))$(Internals.path(build))$(Internals.path(job))/log";
+        headers = headers, kwargs...,
     )
 end
 
@@ -135,6 +164,8 @@ function cluster(organization::Organization, cluster::Cluster; kwargs...)
 end
 cluster(organization::Organization, id::UUID; kwargs...) =
     cluster(organization, Cluster(id = id); kwargs...)
+cluster(cluster::Cluster; kwargs...) =
+    request(Cluster, "GET", String((cluster.url::URI).path); kwargs...)
 
 # Resolve a cluster by `name` by paginating through `clusters(organization)`. Note that
 # this triggers a full list request; prefer looking up by `id` when known.
@@ -153,6 +184,8 @@ function cluster_queues(organization::Organization, cluster::Cluster; kwargs...)
         kwargs...
     )
 end
+cluster_queues(cluster::Cluster; kwargs...) =
+    paged_request(ClusterQueue, "GET", String((cluster.queues_url::URI).path); kwargs...)
 
 # https://buildkite.com/docs/apis/rest-api/agents#list-agents
 function agents(organization::Organization; kwargs...)
@@ -172,6 +205,8 @@ function agent(organization::Organization, agent::Agent; kwargs...)
 end
 agent(organization::Organization, id::UUID; kwargs...) =
     agent(organization, Agent(id = id); kwargs...)
+agent(agent::Agent; kwargs...) =
+    request(Agent, "GET", String((agent.url::URI).path); kwargs...)
 
 # https://buildkite.com/docs/apis/rest-api/clusters/queues#get-a-queue
 function cluster_queue(
@@ -185,6 +220,8 @@ function cluster_queue(
 end
 cluster_queue(organization::Organization, cluster::Cluster, id::UUID; kwargs...) =
     cluster_queue(organization, cluster, ClusterQueue(id = id); kwargs...)
+cluster_queue(queue::ClusterQueue; kwargs...) =
+    request(ClusterQueue, "GET", String((queue.url::URI).path); kwargs...)
 
 # Resolve a queue by `key` by paginating through `cluster_queues(organization, cluster)`.
 function cluster_queue(

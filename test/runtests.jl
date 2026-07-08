@@ -89,6 +89,10 @@ const SMALL_PAGE = Dict("per_page" => "3")
         end
 
         if pipeline !== nothing
+            @testset "pipeline url shortcut" begin
+                got = Buildkite.pipeline(pipeline)
+                @test got.id == pipeline.id
+            end
             @testset "builds" begin
                 bs = collect(
                     Buildkite.builds(org, pipeline; query = SMALL_PAGE, page_limit = 1),
@@ -113,6 +117,7 @@ const SMALL_PAGE = Dict("per_page" => "3")
                     job = Buildkite.Job(id = a.job_id)
                     got = Buildkite.artifact(org, pipeline, build, job, a)
                     @test got.id == a.id
+                    @test Buildkite.artifact(a).id == a.id  # url-based shortcut
                 end
             end
 
@@ -120,8 +125,30 @@ const SMALL_PAGE = Dict("per_page" => "3")
                 idx = build.jobs === nothing ? nothing :
                     findfirst(j -> j.id !== nothing, build.jobs)
                 if idx !== nothing
-                    arts = collect(Buildkite.artifacts(org, pipeline, build, build.jobs[idx]))
-                    @test arts isa Vector{Buildkite.Artifact}
+                    job = build.jobs[idx]
+                    arts_chain = collect(Buildkite.artifacts(org, pipeline, build, job))
+                    arts_url = collect(Buildkite.artifacts(job))  # url-based shortcut
+                    @test length(arts_chain) == length(arts_url)
+                end
+            end
+
+            @testset "job_log" begin
+                # Pick the first completed job so the log endpoint has something to return.
+                idx = build.jobs === nothing ? nothing :
+                    findfirst(
+                        j -> j.id !== nothing && j.state in ("passed", "failed"),
+                        build.jobs,
+                    )
+                if idx !== nothing
+                    job = build.jobs[idx]
+                    log = Buildkite.job_log(job)
+                    @test log isa Buildkite.Log
+                    @test log.size isa Int
+                    @test log.content isa String
+                    @test sizeof(log.content) == log.size
+                    # Chain form returns the same log
+                    log2 = Buildkite.job_log(org, pipeline, build, job)
+                    @test log2.size == log.size
                 end
             end
 
@@ -140,14 +167,18 @@ const SMALL_PAGE = Dict("per_page" => "3")
                 @test c.name isa String
                 @test Buildkite.cluster(org, c.id).id == c.id
                 @test Buildkite.cluster(org, c.name).id == c.id
+                @test Buildkite.cluster(c).id == c.id  # url-based shortcut
                 @test Buildkite.cluster(org, "__does-not-exist__") === nothing
 
-                queues = collect(Buildkite.cluster_queues(org, c))
-                @test all(q -> q isa Buildkite.ClusterQueue, queues)
-                if !isempty(queues)
-                    q = queues[1]
+                queues_chain = collect(Buildkite.cluster_queues(org, c))
+                queues_url = collect(Buildkite.cluster_queues(c))  # url-based shortcut
+                @test length(queues_chain) == length(queues_url)
+                @test all(q -> q isa Buildkite.ClusterQueue, queues_chain)
+                if !isempty(queues_chain)
+                    q = queues_chain[1]
                     @test Buildkite.cluster_queue(org, c, q.id).id == q.id
                     @test Buildkite.cluster_queue(org, c, q.key).id == q.id
+                    @test Buildkite.cluster_queue(q).id == q.id  # url-based shortcut
                 end
             end
         end
@@ -157,6 +188,7 @@ const SMALL_PAGE = Dict("per_page" => "3")
                 @test a isa Buildkite.Agent
                 @test a.id isa UUID
                 @test Buildkite.agent(org, a.id).id == a.id
+                @test Buildkite.agent(a).id == a.id  # url-based shortcut
                 break
             end
         end

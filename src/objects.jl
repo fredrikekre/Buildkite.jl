@@ -88,17 +88,16 @@ function Internals.unmarshal(::Type{B}, val) where {B <: BuildkiteObject}
     return B(val)
 end
 
-function Internals.unmarshal(::Type{Vector{B}}, val) where {B <: BuildkiteObject}
-    return map(v -> Internals.unmarshal(B, v), val)::Vector{B}
-    # return map(v -> (Internals.unmarshal(B, v); error()), val)::Vector{B}
+function Internals.unmarshal(::Type{Vector{B}}, val::AbstractVector) where {B <: BuildkiteObject}
+    return B[Internals.unmarshal(B, v)::B for v in val]
 end
 
 # TODO: Tighten the struct field type here.
 function Internals.unmarshal(::Type{Vector{Any}}, val::AbstractVector)
     return collect(Any, val)
 end
-function Internals.unmarshal(::Type{Vector{T}}, val::AbstractVector) where {T <: JSONTypes}
-    return map(x -> Internals.unmarshal(T, x)::T, val)
+function Internals.unmarshal(::Type{Vector{T}}, val::AbstractVector) where {T}
+    return T[Internals.unmarshal(T, x)::T for x in val]
 end
 
 
@@ -362,6 +361,13 @@ struct Annotation <: BuildkiteObject
     id::Union{UUID, Nothing}
     style::Union{String, Nothing}
     updated_at::Union{DateTime, Nothing}
+end
+
+struct Log <: BuildkiteObject
+    content::Union{String, Nothing}
+    header_times::Union{Vector{DateTime}, Nothing}
+    size::Union{Int, Nothing}
+    url::Union{URI, Nothing}
 end
 
 struct AccessToken <: BuildkiteObject
