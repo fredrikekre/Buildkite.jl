@@ -55,6 +55,68 @@ function access_token(; kwargs...)
     return request(AccessToken, "GET", "/v2/access-token"; kwargs...)
 end
 
+# https://buildkite.com/docs/apis/rest-api/user#get-the-current-user
+function user(; kwargs...)
+    return request(User, "GET", "/v2/user"; kwargs...)
+end
+
+# https://buildkite.com/docs/apis/rest-api/organizations#list-organizations
+function organizations(; kwargs...)
+    return paged_request(Organization, "GET", "/v2/organizations"; kwargs...)
+end
+
+# https://buildkite.com/docs/apis/rest-api/organizations#get-an-organization
+function organization(organization::Organization; kwargs...)
+    return request(Organization, "GET", "/v2$(Internals.path(organization))"; kwargs...)
+end
+organization(slug::AbstractString; kwargs...) =
+    organization(Organization(slug = slug); kwargs...)
+
+# https://buildkite.com/docs/apis/rest-api/artifacts#list-artifacts-for-a-build
+function artifacts(
+        organization::Organization, pipeline::Pipeline, build::Build; kwargs...
+    )
+    return paged_request(
+        Artifact, "GET",
+        "/v2$(Internals.path(organization))$(Internals.path(pipeline))$(Internals.path(build))/artifacts";
+        kwargs...
+    )
+end
+
+# https://buildkite.com/docs/apis/rest-api/artifacts#list-artifacts-for-a-job
+function artifacts(
+        organization::Organization, pipeline::Pipeline, build::Build, job::Job; kwargs...
+    )
+    return paged_request(
+        Artifact, "GET",
+        "/v2$(Internals.path(organization))$(Internals.path(pipeline))$(Internals.path(build))$(Internals.path(job))/artifacts";
+        kwargs...
+    )
+end
+
+# https://buildkite.com/docs/apis/rest-api/artifacts#get-an-artifact
+function artifact(
+        organization::Organization, pipeline::Pipeline, build::Build,
+        job::Job, artifact::Artifact; kwargs...
+    )
+    return request(
+        Artifact, "GET",
+        "/v2$(Internals.path(organization))$(Internals.path(pipeline))$(Internals.path(build))$(Internals.path(job))$(Internals.path(artifact))";
+        kwargs...
+    )
+end
+
+# https://buildkite.com/docs/apis/rest-api/annotations#list-annotations-for-a-build
+function annotations(
+        organization::Organization, pipeline::Pipeline, build::Build; kwargs...
+    )
+    return paged_request(
+        Annotation, "GET",
+        "/v2$(Internals.path(organization))$(Internals.path(pipeline))$(Internals.path(build))/annotations";
+        kwargs...
+    )
+end
+
 # https://buildkite.com/docs/apis/rest-api/clusters#clusters-list-clusters
 function clusters(organization::Organization; kwargs...)
     return paged_request(

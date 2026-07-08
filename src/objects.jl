@@ -107,7 +107,16 @@ end
 ########################
 
 struct Organization <: BuildkiteObject
+    agents_url::Union{URI, Nothing}
+    created_at::Union{DateTime, Nothing}
+    emojis_url::Union{URI, Nothing}
+    graphql_id::Union{String, Nothing}
+    id::Union{UUID, Nothing}
+    name::Union{String, Nothing}
+    pipelines_url::Union{URI, Nothing}
     slug::Union{String, Nothing}
+    url::Union{URI, Nothing}
+    web_url::Union{URI, Nothing}
 end
 Internals.slug(x::Organization) = x.slug::String
 Internals.path(x::Organization) = "/organizations/$(Internals.slug(x))"
@@ -247,6 +256,7 @@ struct Job <: BuildkiteObject
     agent_query_rules::Union{Vector{String}, Nothing}
     artifact_paths::Union{String, Nothing}
     artifacts_url::Union{URI, Nothing}
+    async::Union{Bool, Nothing}
     build_url::Union{URI, Nothing}
     cluster_id::Union{UUID, Nothing}
     cluster_queue_id::Union{UUID, Nothing}
@@ -283,6 +293,7 @@ struct Job <: BuildkiteObject
     state::Union{String, Nothing}
     step::Union{JSONObject, Nothing} # TODO: Proper Step type
     step_key::Union{String, Nothing}
+    triggered_build::Union{JSONObject, Nothing}
     type::Union{String, Nothing}
     unblock_url::Union{URI, Nothing}
     unblockable::Union{Bool, Nothing}
@@ -290,6 +301,7 @@ struct Job <: BuildkiteObject
     unblocked_by::Union{User, Nothing}
     web_url::Union{URI, Nothing}
 end
+Internals.path(x::Job) = "/jobs/$(x.id::UUID)"
 
 struct Build <: BuildkiteObject
     author::Union{User, Nothing}
@@ -318,9 +330,38 @@ struct Build <: BuildkiteObject
     source::Union{String, Nothing}
     started_at::Union{DateTime, Nothing}
     state::Union{String, Nothing}
-    tag::Union{VersionNumber, Nothing}
+    tag::Union{String, Nothing}
     url::Union{URI, Nothing}
     web_url::Union{URI, Nothing}
+end
+Internals.path(x::Build) = "/builds/$(x.number::Int)"
+
+struct Artifact <: BuildkiteObject
+    dirname::Union{String, Nothing}
+    download_url::Union{URI, Nothing}
+    file_size::Union{Int, Nothing}
+    filename::Union{String, Nothing}
+    glob_path::Union{String, Nothing}
+    id::Union{UUID, Nothing}
+    job_id::Union{UUID, Nothing}
+    mime_type::Union{String, Nothing}
+    original_path::Union{String, Nothing}
+    path::Union{String, Nothing}
+    sha1sum::Union{String, Nothing}
+    sha256sum::Union{String, Nothing}
+    state::Union{String, Nothing}
+    step_key::Union{String, Nothing}
+    url::Union{URI, Nothing}
+end
+Internals.path(x::Artifact) = "/artifacts/$(x.id::UUID)"
+
+struct Annotation <: BuildkiteObject
+    body_html::Union{String, Nothing}
+    context::Union{String, Nothing}
+    created_at::Union{DateTime, Nothing}
+    id::Union{UUID, Nothing}
+    style::Union{String, Nothing}
+    updated_at::Union{DateTime, Nothing}
 end
 
 struct AccessToken <: BuildkiteObject
