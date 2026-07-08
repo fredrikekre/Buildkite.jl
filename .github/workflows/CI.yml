@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'release-'
+    tags:
+      - '*'
+  pull_request:
+
+jobs:
+  test:
+    name: Julia 1 - ubuntu-latest - ${{ github.event_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - uses: julia-actions/julia-runtest@v1
+        with:
+          coverage: false
+        env:
+          BUILDKITE_TOKEN: ${{ secrets.BUILDKITE_TOKEN }}
