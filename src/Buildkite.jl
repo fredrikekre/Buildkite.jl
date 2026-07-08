@@ -31,6 +31,9 @@ function Internals.buildkite_headers(headers = nothing; token = nothing)
     if !haskey(headers, "User-Agent")
         headers["User-Agent"] = "Buildkite.jl"
     end
+    if !haskey(headers, "Accept")
+        headers["Accept"] = "application/json"
+    end
     return headers
 end
 

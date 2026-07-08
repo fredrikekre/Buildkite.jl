@@ -197,8 +197,8 @@ end
     job_log(job::Job) -> Log
     job_log(org, pipeline, build, job::Job) -> Log
 
-Get a job's log output. Sets `Accept: application/json` to receive the structured
-`Log` response (default `/log` returns HTML). The one-arg form follows `job.log_url`.
+Get a job's log output as a structured `Log` (`content` + `header_times` + `size` +
+`url`). The one-arg form follows `job.log_url`.
 
 API docs: <https://buildkite.com/docs/apis/rest-api/jobs#get-a-jobs-log-output>
 """
@@ -208,17 +208,15 @@ function job_log(job::Job; kwargs...)
     # passed through verbatim. Consumers likely want helpers (strip ANSI, split into
     # `(timestamp, text)` lines, etc.); none provided yet.
     log_url = job.log_url::URI
-    headers = HTTP.Headers(["Accept" => "application/json"])
-    return request(Log, "GET", String(log_url.path); headers = headers, kwargs...)
+    return request(Log, "GET", String(log_url.path); kwargs...)
 end
 function job_log(
         organization::Organization, pipeline::Pipeline, build::Build, job::Job; kwargs...
     )
-    headers = HTTP.Headers(["Accept" => "application/json"])
     return request(
         Log, "GET",
         "/v2$(Internals.path(organization))$(Internals.path(pipeline))$(Internals.path(build))$(Internals.path(job))/log";
-        headers = headers, kwargs...,
+        kwargs...,
     )
 end
 
