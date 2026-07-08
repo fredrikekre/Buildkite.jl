@@ -22,6 +22,34 @@ function builds(organization::Organization, pipeline::Pipeline; kwargs...)
     )
 end
 
+# https://buildkite.com/docs/apis/rest-api/builds#get-a-build
+function build(organization::Organization, pipeline::Pipeline, number::Integer; kwargs...)
+    return request(
+        Build, "GET",
+        "/v2$(Internals.path(organization))$(Internals.path(pipeline))/builds/$(number)";
+        kwargs...
+    )
+end
+
+# https://buildkite.com/docs/apis/rest-api/pipelines#list-pipelines
+function pipelines(organization::Organization; kwargs...)
+    return paged_request(
+        Pipeline, "GET", "/v2$(Internals.path(organization))/pipelines";
+        kwargs...
+    )
+end
+
+# https://buildkite.com/docs/apis/rest-api/pipelines#get-a-pipeline
+function pipeline(organization::Organization, pipeline::Pipeline; kwargs...)
+    return request(
+        Pipeline, "GET",
+        "/v2$(Internals.path(organization))$(Internals.path(pipeline))";
+        kwargs...
+    )
+end
+pipeline(organization::Organization, slug::AbstractString; kwargs...) =
+    pipeline(organization, Pipeline(slug = slug); kwargs...)
+
 # https://buildkite.com/docs/apis/rest-api/access-token#get-the-current-token
 function access_token(; kwargs...)
     return request(AccessToken, "GET", "/v2/access-token"; kwargs...)
